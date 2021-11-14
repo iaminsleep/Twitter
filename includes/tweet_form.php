@@ -1,3 +1,5 @@
+<?php if ($isAuth): ?>
+<!--Если пользователь не авторизован, то данная часть кода не будет присутствовать в верстке.-->
 <section class="wrapper">
     <form class="tweet-form">
         <div class="tweet-form__wrapper">
@@ -12,3 +14,4 @@
         </div>
     </form>
 </section>
+<?php endif;?>
