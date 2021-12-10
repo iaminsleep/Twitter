@@ -1,3 +1,7 @@
+<?php if ($isAuth) {
+    redirect();
+}
+else { ?>
 <section class="wrapper">
     <h2 class="tweet-form__title"><?php echo $title; ?></h2>
     <?php if($error) { ?>
@@ -14,3 +18,4 @@
         </div>
     </form>
 </section>
+<?php } ?>

@@ -10,7 +10,7 @@ function debug($var, $stop = false) {
 }
 
 //функция редиректа, которая значительно облегчает верстку
-function redirect($location) {
+function redirect($location = '') {
     header("Location: ".get_url($location)); //если значение пустое, перекидывает на главную страницу
     die;
 }
@@ -50,14 +50,17 @@ function db_query($sql, $exec = false) {
     return db()->query($sql);
 }
 
-function get_posts($user_id = 0) {
+function get_posts($user_id = 0, $sort = false) {
+    $sorting = 'DESC';
+    if($sort) $sorting = 'ASC';
+
     if($user_id > 0) {
         return db_query("SELECT posts.*, users.name, users.login, 
        users.avatar FROM `posts` JOIN `users` ON users.id = posts.user_id WHERE posts.user_id = $user_id;")->fetchAll();
     }
     else {
         return db_query("SELECT posts.*, users.name, users.login, 
-       users.avatar FROM `posts` JOIN `users` ON users.id = posts.user_id;")->fetchAll();
+       users.avatar FROM `posts` JOIN `users` ON users.id = posts.user_id ORDER BY `posts`.`date` $sorting")->fetchAll();
     }
 }
 
@@ -71,7 +74,7 @@ function add_user($login , $pass) {
     $name = ucfirst($login); //ucfirst делает первую букву логина заглавной
     $password = password_hash($pass, PASSWORD_DEFAULT);
     return db_query("INSERT INTO `users` (`id`, `login`, `pass`, `name`, `avatar`) 
-                            VALUES (NULL, '$login', '$password', '$name', 'images/no-avatar.png');", true);
+                            VALUES (NULL, '$login', '$password', '$name', 'images/no_avatar.png');", true);
 }
 
 //$auth_data - переменная, куда будут вводиться данные из $_POST формы регистрации после отправки (name = login , pass и pass2)
@@ -118,7 +121,7 @@ function register_user($auth_data) {
     //если пользователь добавлен, перекинет на главную страницу
     if(add_user($auth_data['login'], $auth_data['pass'])) {
         $_SESSION['error-message'] = '';
-        redirect('');
+        redirect();
     }
 }
 
@@ -130,7 +133,7 @@ function login($auth_data) {
 
     if(empty($user)) {
         $_SESSION['error-message'] = 'Пользователь '.$auth_data['login'].' не найден';
-        redirect('');
+        redirect();
     }
 
     //проверка двух зашифрованных паролей на идентичность, если совпадает то происходит переход на страницу пользователя
@@ -141,7 +144,7 @@ function login($auth_data) {
     }
     else {
         $_SESSION['error-message'] = 'Пароль неверный';
-        redirect('');
+        redirect();
     }
 }
 
@@ -158,3 +161,70 @@ function get_error_message() {
 
 //переменная, которая проверяет, авторизирован ли пользователь
 $isAuth = isset($_SESSION['user']['id']);
+
+function add_post($text, $image) {
+    $text = trim($text);
+
+    if(mb_strlen($text) > 255 || str_word_count($text, 0, null) > 50) {
+        $text = mb_substr($text , 0, 250).' ...';
+    }
+
+    $user_id = $_SESSION['user']['id'];
+    $sql = "INSERT INTO `posts` (`id`, `user_id`, `text`, `image`) VALUES (NULL, $user_id, '$text', '$image');";
+    return db_query($sql, true);
+}
+
+function delete_post($id) {
+    if(is_numeric($id)) {
+        if($id != 0) {
+            $user_id = $_SESSION['user']['id'];
+            $sql = "DELETE FROM `posts` WHERE `posts`.`id` = $id AND `user_id` = $user_id";
+            return db_query($sql, true);
+        }
+    }
+    else {
+        redirect('user_posts.php');
+    }
+}
+
+function get_likes_count($post_id) {
+    //fetchColumn выдаст сразу число из столбца COUNT(*), вместо массива, что заметно облегчит работу
+    if(empty($post_id)) return 0;
+
+    return db_query("SELECT COUNT(*) FROM `likes` WHERE `post_id` = $post_id")->fetchColumn();
+
+}
+
+function is_post_liked($post_id) {
+    $user_id = $_SESSION['user']['id'];
+    if(empty($post_id)) return false;
+
+    //rowCount() возвращает кол-во строк
+    return db_query("SELECT * FROM `likes` WHERE `post_id` = $post_id AND `user_id` = $user_id;")->rowCount() > 0; //если строк из результата больше чем 0 (то есть лайк поставлен)
+    //,то вернётся true, если лайк не поставлен то строки не будет (false)
+}
+
+function add_like($post_id) {
+    $user_id = $_SESSION['user']['id'];
+    if(empty($post_id)) return false;
+
+    $sql = "INSERT INTO `likes` (`post_id`, `user_id`) VALUES ($post_id, $user_id);";
+    return db_query($sql, true);
+}
+
+function delete_like($post_id) {
+    if(empty($post_id)) return false;
+    $user_id = $_SESSION['user']['id'];
+    return db_query("DELETE FROM `likes` WHERE `post_id` = $post_id AND `user_id` = $user_id", true);
+}
+
+function get_liked_posts() {
+    $user_id = $_SESSION['user']['id'];
+
+    $sql = "SELECT posts.*, users.name, users.login, users.avatar FROM `likes` 
+    JOIN `posts` ON posts.id = likes.post_id 
+    JOIN `users` ON users.id = posts.user_id  
+            WHERE likes.user_id = $user_id;";
+
+    return db_query($sql)->fetchAll();
+}
