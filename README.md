@@ -1,1 +1,5 @@
-# twitter_project
+# Twitter
+### Технологии: 
+- html
+- css
+- php
