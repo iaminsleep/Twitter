@@ -1,7 +1,7 @@
 # Twitter
-Сайт Твиттер, написанный на языке PHP и JavaScript. Используемая база данных - MySQL
+A Twitter site written in PHP and JavaScript. The database used is MySQL
 
-### Технологии:
+### Technologies:
 - html
 - css
 - php
